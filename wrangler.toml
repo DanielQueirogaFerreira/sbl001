@@ -1,0 +1,9 @@
+name = "sbl001"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+# Rules to import HTML directly into the worker bundle
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = false
