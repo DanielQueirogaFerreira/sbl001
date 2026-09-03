@@ -114,12 +114,33 @@ function buildInitialDatabase() {
   return patientMap;
 }
 
-// In-memory singleton with localStorage persistence capability
+// In-memory singleton with safe localStorage fallback
 let CURRENT_DATABASE = null;
+
+function safeGetStorage(key) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch (e) {
+    console.warn('Storage read restricted or unavailable, using in-memory state:', e);
+  }
+  return null;
+}
+
+function safeSetStorage(key, value) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+  } catch (e) {
+    console.warn('Storage write restricted or unavailable:', e);
+  }
+}
 
 export function getDatabase() {
   if (!CURRENT_DATABASE) {
-    const saved = localStorage.getItem('sbl_database_state');
+    const saved = safeGetStorage('sbl_database_state');
     if (saved) {
       try {
         CURRENT_DATABASE = JSON.parse(saved);
@@ -135,7 +156,7 @@ export function getDatabase() {
 
 export function saveDatabaseState() {
   if (CURRENT_DATABASE) {
-    localStorage.setItem('sbl_database_state', JSON.stringify(CURRENT_DATABASE));
+    safeSetStorage('sbl_database_state', JSON.stringify(CURRENT_DATABASE));
   }
 }
 
