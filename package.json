@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'docs/index.html')\"",
+    "dev": "node scripts/dev.cjs",
+    "build": "node scripts/build.cjs",
     "preview": "vite preview",
     "deploy:gh": "gh-pages -d dist"
   },
