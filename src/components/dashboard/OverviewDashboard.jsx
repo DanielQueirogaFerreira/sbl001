@@ -11,7 +11,8 @@ import {
   Moon,
   TrendingUp,
   ShieldCheck,
-  Calendar
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 import { calculateClinicalMetrics, getScoreCategory, getScoreBadgeClass } from '../../services/clinicalMetrics';
 import { calculateRoutineDrift, analyzeWeeklyRoutinePatterns } from '../../services/routineEngine';
