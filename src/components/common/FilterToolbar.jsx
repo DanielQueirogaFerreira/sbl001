@@ -1,16 +1,17 @@
 import React from 'react';
-import { Filter, Calendar, Sparkles } from 'lucide-react';
+import { Filter, Calendar, Sparkles, Database, Bot } from 'lucide-react';
 
 export default function FilterToolbar({
   timeframe,
   onSelectTimeframe,
-  isSyntheticMode,
-  onToggleSynthetic,
+  dataSourceFilter = 'all',
+  onSelectDataSource,
   totalLogs = 0,
   patientName = ''
 }) {
   return (
     <div className="filter-toolbar">
+      {/* Timeframe Window */}
       <div className="filter-group">
         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Calendar size={15} /> Janela Temporal:
@@ -19,19 +20,19 @@ export default function FilterToolbar({
           className={`filter-btn ${timeframe === '7d' ? 'active' : ''}`}
           onClick={() => onSelectTimeframe('7d')}
         >
-          Últimos 7 Dias
+          7 Dias
         </button>
         <button
           className={`filter-btn ${timeframe === '15d' ? 'active' : ''}`}
           onClick={() => onSelectTimeframe('15d')}
         >
-          Últimos 15 Dias
+          15 Dias
         </button>
         <button
           className={`filter-btn ${timeframe === '30d' ? 'active' : ''}`}
           onClick={() => onSelectTimeframe('30d')}
         >
-          Últimos 30 Dias
+          30 Dias
         </button>
         <button
           className={`filter-btn ${timeframe === 'all' ? 'active' : ''}`}
@@ -41,15 +42,32 @@ export default function FilterToolbar({
         </button>
       </div>
 
+      {/* Explicit RD vs SD Data Source Filter */}
       <div className="filter-group">
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Filter size={14} /> Fonte:
+        </span>
         <button
-          className={`filter-btn ${isSyntheticMode ? 'active' : ''}`}
-          onClick={onToggleSynthetic}
-          title="Alterna entre apenas dados reais dos formulários ou projeção estendida"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          className={`filter-btn ${dataSourceFilter === 'all' ? 'active' : ''}`}
+          onClick={() => onSelectDataSource('all')}
         >
-          <Sparkles size={14} color={isSyntheticMode ? '#38bdf8' : 'var(--text-muted)'} />
-          <span>{isSyntheticMode ? 'Modo Estendido (Real + Sintético)' : 'Apenas Dados Reais (Agosto 2026)'}</span>
+          Todos os Dados
+        </button>
+        <button
+          className={`filter-btn ${dataSourceFilter === 'RD' ? 'active' : ''}`}
+          onClick={() => onSelectDataSource('RD')}
+          style={{ borderColor: dataSourceFilter === 'RD' ? 'var(--color-prazer-border)' : 'var(--border-subtle)' }}
+        >
+          <span className="badge badge-prazer" style={{ padding: '0.1rem 0.35rem', fontSize: '0.68rem', marginRight: '0.3rem' }}>RD</span>
+          Apenas Reais
+        </button>
+        <button
+          className={`filter-btn ${dataSourceFilter === 'SD' ? 'active' : ''}`}
+          onClick={() => onSelectDataSource('SD')}
+          style={{ borderColor: dataSourceFilter === 'SD' ? 'rgba(168, 85, 247, 0.5)' : 'var(--border-subtle)' }}
+        >
+          <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', padding: '0.1rem 0.35rem', fontSize: '0.68rem', marginRight: '0.3rem' }}>SD</span>
+          Apenas Sintéticos
         </button>
       </div>
     </div>

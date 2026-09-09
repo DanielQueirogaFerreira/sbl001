@@ -74,16 +74,27 @@ export default function OverviewDashboard({
           </div>
         </div>
 
-        {/* Anchors Pill List */}
-        <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <ShieldCheck size={14} /> Âncoras Terapêuticas:
-          </span>
-          {patient.keyAnchors?.map((anc, i) => (
-            <span key={i} className="badge badge-gray" style={{ fontSize: '0.72rem', textTransform: 'none' }}>
-              {anc}
+        {/* Governance & Tutorship Row */}
+        <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>
+              🩺 Terapeuta Responsável: <strong style={{ color: '#38bdf8' }}>{patient.assignedProfessionalName || 'Dr. Plínio'}</strong> ({patient.assignedProfessionalId || 'PLN00001'})
             </span>
-          ))}
+            <span style={{ color: 'var(--text-secondary)' }}>
+              📋 Protocolo Tutelar: <strong style={{ color: 'var(--color-prazer-light)' }}>{patient.protocolId || 'PRT001'}</strong> ({patient.protocolName || 'Protocolo do Plínio'})
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <ShieldCheck size={13} /> Âncoras:
+            </span>
+            {patient.keyAnchors?.slice(0, 3).map((anc, i) => (
+              <span key={i} className="badge badge-gray" style={{ fontSize: '0.7rem', textTransform: 'none' }}>
+                {anc}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -273,8 +284,14 @@ export default function OverviewDashboard({
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                         {log.timestamp}
                       </span>
-                      {log.isSynthetic && (
-                        <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>Sintético</span>
+                      {log.isSynthetic || log.dataSource === 'SD' ? (
+                        <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                          [SD] Sintético
+                        </span>
+                      ) : (
+                        <span className="badge badge-prazer" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                          [RD] Real
+                        </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

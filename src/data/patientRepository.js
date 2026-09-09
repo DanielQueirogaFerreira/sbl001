@@ -13,6 +13,11 @@ export const INITIAL_PATIENTS = [
     avatar: '👩‍⚕️',
     diagnosis: 'Recuperação - Fase de Consolidação (Primeiro Ano)',
     enrolledDate: 'Agosto 2026',
+    assignedProfessionalId: 'PLN00001',
+    assignedProfessionalName: 'Dr. Plínio',
+    protocolId: 'PRT001',
+    protocolName: 'Protocolo do Plínio',
+    transferState: null,
     keyAnchors: ['Ambulatório (Seg/Qua/Qui/Sex)', 'Academia & Estudo', 'Medcurso (Domingo)', 'Família & Amigos'],
     notes: 'Rotina ativa de estudos e graduação. Boa rede de apoio familiar, vigilância necessária em sobrecarga pré-provas.'
   },
@@ -22,6 +27,11 @@ export const INITIAL_PATIENTS = [
     avatar: '👨‍💼',
     diagnosis: 'Recuperação - Estabilização de Rotina Laboral e NA',
     enrolledDate: 'Agosto 2026',
+    assignedProfessionalId: 'PLN00001',
+    assignedProfessionalName: 'Dr. Plínio',
+    protocolId: 'PRT001',
+    protocolName: 'Protocolo do Plínio',
+    transferState: null,
     keyAnchors: ['Trabalho (Seg a Sex)', 'Procyon (Ter/Sex)', 'Ambulatório (Seg/Qua/Qui/Sex)', 'Narcóticos Anônimos (Sábado)', 'Centro Espírita / Igreja'],
     notes: 'Maior histórico diário contínuo. Picos de dever durante dias úteis e necessidade de preservar caminhadas vespertinas.'
   },
@@ -31,6 +41,11 @@ export const INITIAL_PATIENTS = [
     avatar: '👩‍🎨',
     diagnosis: 'Recuperação - Manejo de Humor e Ancoragem Terapêutica',
     enrolledDate: 'Agosto 2026',
+    assignedProfessionalId: 'PLN00001',
+    assignedProfessionalName: 'Dr. Plínio',
+    protocolId: 'PRT001',
+    protocolName: 'Protocolo do Plínio',
+    transferState: null,
     keyAnchors: ['Depakote / Almeida 35 / Desvenlafaxina / Quetiapina', 'Ambulatório', 'Almoço com a Mãe', 'Crochê & Leitura', 'Terreiro / Balneário'],
     notes: 'Atenção rigorosa aos horários de medicação psiquiátrica. Evitar hipersonia vespertina que mascara episódios disfóricos.'
   }
@@ -99,7 +114,8 @@ function buildInitialDatabase() {
             noite: resp.noite || { status: '', score: 4 },
             satisfacao: resp.satisfacao !== undefined ? resp.satisfacao : 8,
             imprevistos: resp.imprevistos || '',
-            isSynthetic: false
+            isSynthetic: false,
+            dataSource: 'RD'
           });
         });
       }
@@ -177,9 +193,9 @@ export function getPatientById(id) {
 }
 
 /**
- * Filters logs by timeframe window (7d, 15d, 30d, all, custom)
+ * Filters logs by timeframe window (7d, 15d, 30d, all) and data source (all, RD, SD)
  */
-export function getPatientLogs(patientId, timeframe = 'all', includeSynthetic = false) {
+export function getPatientLogs(patientId, timeframe = 'all', includeSynthetic = false, dataSourceFilter = 'all') {
   const patient = getPatientById(patientId);
   if (!patient || !patient.logs) return [];
 
@@ -189,6 +205,13 @@ export function getPatientLogs(patientId, timeframe = 'all', includeSynthetic = 
     const syntheticLogs = generateSyntheticExtension(patientId, patient.logs);
     logs = [...logs, ...syntheticLogs];
     logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  }
+
+  // Filter by Data Source (RD = Real Data, SD = Synthetic Data)
+  if (dataSourceFilter === 'RD') {
+    logs = logs.filter(log => !log.isSynthetic || log.dataSource === 'RD');
+  } else if (dataSourceFilter === 'SD') {
+    logs = logs.filter(log => log.isSynthetic || log.dataSource === 'SD');
   }
 
   if (timeframe === 'all' || logs.length === 0) {
