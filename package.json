@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.cjs",
-    "build": "node scripts/build.cjs",
+    "build": "node --max-old-space-size=4096 scripts/build.cjs",
     "preview": "vite preview",
     "deploy:gh": "gh-pages -d dist",
     "deploy:cf": "npm run build && npx wrangler deploy"

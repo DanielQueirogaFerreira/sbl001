@@ -20,6 +20,7 @@ import ProtocolStudioView from './components/protocols/ProtocolStudioView';
 import ProfessionalHealthView from './components/health/ProfessionalHealthView';
 import ScepterControlPanel from './components/admin/ScepterControlPanel';
 import SyntheticDataLab from './components/admin/SyntheticDataLab';
+import VersionBadge from './components/common/VersionBadge';
 
 import { 
   getAllPatients, 
@@ -268,6 +269,9 @@ export default function App() {
           Laboratório da Sobriedade © 2026 • Pesquisa e Desenvolvimento em Prevenção de Recaída • Ingestão Consolidada de 21 Formulários Google Forms • Protocolo do Plínio (PRT001)
         </p>
       </footer>
+
+      {/* Technical Version Badge with Text Scrim (Bottom Left) */}
+      <VersionBadge />
     </div>
   );
 }
