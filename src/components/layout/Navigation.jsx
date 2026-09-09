@@ -10,19 +10,24 @@ import {
   Sliders,
   HeartHandshake,
   Crown,
-  Bot
+  Bot,
+  UserPlus
 } from 'lucide-react';
 
-export const TABS = [
-  { id: 'dashboard', label: 'Prontuário', icon: LayoutDashboard },
-  { id: 'routine', label: 'Planejado vs Real', icon: CalendarClock },
-  { id: 'logger', label: 'Registro Diário', icon: Edit3 },
-  { id: 'swot', label: 'Matriz SWOT', icon: BrainCircuit },
-  { id: 'analytics', label: 'Heatmaps', icon: BarChart3 },
+export const ALL_TABS = [
+  // Clinical / Professional Tabs
+  { id: 'dashboard', label: 'Prontuário', icon: LayoutDashboard, professionalOnly: true },
+  { id: 'routine', label: 'Planejado vs Real', icon: CalendarClock, professionalOnly: true },
+  { id: 'logger', label: 'Registro Diário', icon: Edit3, professionalOnly: true },
+  { id: 'swot', label: 'Matriz SWOT', icon: BrainCircuit, professionalOnly: true },
+  { id: 'analytics', label: 'Heatmaps', icon: BarChart3, professionalOnly: true },
+  { id: 'health', label: 'Saúde do Terapeuta', icon: HeartHandshake, professionalOnly: true },
+
+  // Shared & Administrative Tabs
+  { id: 'invites', label: 'Central de Convites', icon: UserPlus },
+  { id: 'scepter', label: 'Cetro & Governança', icon: Crown, adminOnly: true },
   { id: 'public_square', label: 'Praça & Manejo', icon: Globe },
   { id: 'protocols', label: 'Studio PRT', icon: Sliders },
-  { id: 'health', label: 'Saúde do Terapeuta', icon: HeartHandshake },
-  { id: 'scepter', label: 'Cetro & Governança', icon: Crown, adminOnly: true },
   { id: 'synthetic', label: 'Laboratório SD', icon: Bot, adminOnly: true },
   { id: 'database', label: 'Base Mestra (21)', icon: Layers }
 ];
@@ -30,7 +35,11 @@ export const TABS = [
 export default function Navigation({ activeTab, onSelectTab, currentUser }) {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
 
-  const visibleTabs = TABS.filter(tab => !tab.adminOnly || isAdmin);
+  const visibleTabs = ALL_TABS.filter(tab => {
+    if (tab.adminOnly && !isAdmin) return false;
+    if (tab.professionalOnly && isAdmin) return false;
+    return true;
+  });
 
   return (
     <nav className="app-nav">

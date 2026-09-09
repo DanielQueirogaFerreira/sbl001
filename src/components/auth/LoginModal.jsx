@@ -3,7 +3,7 @@ import { LogIn, Key, Shield, User, Sparkles, X, Check } from 'lucide-react';
 import { getAllUsers, authenticateUser, setCurrentSession } from '../../services/authRepository';
 import PasswordInput from '../common/PasswordInput';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRedeemInvite }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -84,6 +84,18 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
               <LogIn size={16} /> Entrar no Sistema
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                onClose();
+                if (onOpenRedeemInvite) onOpenRedeemInvite();
+              }}
+              style={{ width: '100%', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}
+            >
+              <Key size={15} /> Possui um Convite? Resgatar & Criar Conta
             </button>
           </form>
 

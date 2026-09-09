@@ -16,7 +16,8 @@ import {
   User,
   Sparkles,
   ArrowRightLeft,
-  LogIn
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 
 export default function MobileBottomNav({
@@ -27,7 +28,8 @@ export default function MobileBottomNav({
   onOpenAiDumpModal,
   onOpenTransferModal,
   onOpenProfileModal,
-  onOpenLoginModal
+  onOpenLoginModal,
+  onOpenCreateInvite
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
@@ -44,60 +46,116 @@ export default function MobileBottomNav({
         className="mobile-bottom-nav"
         aria-label="Navegação móvel inferior"
       >
-        <button
-          className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => handleTabClick('dashboard')}
-          aria-label="Prontuário"
-        >
-          <LayoutDashboard size={20} />
-          <span>Prontuário</span>
-        </button>
+        {isAdmin ? (
+          /* ADMIN BOTTOM BAR TABS */
+          <>
+            <button
+              className={`mobile-nav-item ${activeTab === 'scepter' ? 'active' : ''}`}
+              onClick={() => handleTabClick('scepter')}
+              aria-label="Cetro & Governança"
+            >
+              <Crown size={20} color={activeTab === 'scepter' ? '#f59e0b' : 'currentColor'} />
+              <span>Cetro</span>
+            </button>
 
-        <button
-          className={`mobile-nav-item ${activeTab === 'routine' ? 'active' : ''}`}
-          onClick={() => handleTabClick('routine')}
-          aria-label="Rotina"
-        >
-          <CalendarClock size={20} />
-          <span>Rotina</span>
-        </button>
+            <button
+              className={`mobile-nav-item ${activeTab === 'invites' ? 'active' : ''}`}
+              onClick={() => handleTabClick('invites')}
+              aria-label="Central de Convites"
+            >
+              <UserPlus size={20} />
+              <span>Convites</span>
+            </button>
 
-        {/* Prominent Center Action: Novo Registro */}
-        <button
-          className="mobile-nav-item center-action"
-          onClick={() => {
-            onSelectTab('logger');
-            onOpenNewLogModal();
-          }}
-          aria-label="Novo Registro de Turno"
-          title="Novo Registro Clínico"
-        >
-          <div className="center-action-btn">
-            <PlusCircle size={24} />
-          </div>
-          <span style={{ color: 'var(--color-prazer-light)', fontWeight: 600 }}>+ Turno</span>
-        </button>
+            {/* Prominent Center Action: Emitir Convite */}
+            <button
+              className="mobile-nav-item center-action"
+              onClick={() => {
+                if (onOpenCreateInvite) onOpenCreateInvite('professional');
+              }}
+              aria-label="Emitir Novo Convite"
+              title="Emitir Novo Convite"
+            >
+              <div className="center-action-btn" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 16px rgba(245, 158, 11, 0.45)' }}>
+                <UserPlus size={22} />
+              </div>
+              <span style={{ color: '#fbbf24', fontWeight: 600 }}>+ Convite</span>
+            </button>
 
-        <button
-          className={`mobile-nav-item ${activeTab === 'swot' ? 'active' : ''}`}
-          onClick={() => handleTabClick('swot')}
-          aria-label="SWOT"
-        >
-          <BrainCircuit size={20} />
-          <span>SWOT</span>
-        </button>
+            <button
+              className={`mobile-nav-item ${activeTab === 'public_square' ? 'active' : ''}`}
+              onClick={() => handleTabClick('public_square')}
+              aria-label="Praça Pública"
+            >
+              <Globe size={20} />
+              <span>Praça</span>
+            </button>
 
-        <button
-          className={`mobile-nav-item ${isMenuOpen || !['dashboard', 'routine', 'logger', 'swot'].includes(activeTab) ? 'active' : ''}`}
-          onClick={() => setIsMenuOpen(prev => !prev)}
-          aria-label="Mais Opções e Módulos"
-        >
-          <Menu size={20} />
-          <span>Menu</span>
-          {currentUser?.hasScepter && (
-            <span style={{ position: 'absolute', top: '4px', right: '12px', fontSize: '0.65rem' }}>👑</span>
-          )}
-        </button>
+            <button
+              className={`mobile-nav-item ${isMenuOpen || !['scepter', 'invites', 'public_square'].includes(activeTab) ? 'active' : ''}`}
+              onClick={() => setIsMenuOpen(prev => !prev)}
+              aria-label="Mais Módulos"
+            >
+              <Menu size={20} />
+              <span>Menu</span>
+            </button>
+          </>
+        ) : (
+          /* PROFESSIONAL BOTTOM BAR TABS */
+          <>
+            <button
+              className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => handleTabClick('dashboard')}
+              aria-label="Prontuário"
+            >
+              <LayoutDashboard size={20} />
+              <span>Prontuário</span>
+            </button>
+
+            <button
+              className={`mobile-nav-item ${activeTab === 'routine' ? 'active' : ''}`}
+              onClick={() => handleTabClick('routine')}
+              aria-label="Rotina"
+            >
+              <CalendarClock size={20} />
+              <span>Rotina</span>
+            </button>
+
+            {/* Prominent Center Action: Novo Registro */}
+            <button
+              className="mobile-nav-item center-action"
+              onClick={() => {
+                onSelectTab('logger');
+                onOpenNewLogModal();
+              }}
+              aria-label="Novo Registro de Turno"
+              title="Novo Registro Clínico"
+            >
+              <div className="center-action-btn">
+                <PlusCircle size={24} />
+              </div>
+              <span style={{ color: 'var(--color-prazer-light)', fontWeight: 600 }}>+ Turno</span>
+            </button>
+
+            <button
+              className={`mobile-nav-item ${activeTab === 'swot' ? 'active' : ''}`}
+              onClick={() => handleTabClick('swot')}
+              aria-label="SWOT"
+            >
+              <BrainCircuit size={20} />
+              <span>SWOT</span>
+            </button>
+
+            <button
+              className={`mobile-nav-item ${isMenuOpen || !['dashboard', 'routine', 'logger', 'swot'].includes(activeTab) ? 'active' : ''}`}
+              onClick={() => setIsMenuOpen(prev => !prev)}
+              aria-label="Mais Opções e Módulos"
+            >
+              <Menu size={20} />
+              <span>Menu</span>
+            </button>
+          </>
+        )}
       </nav>
 
       {/* Bottom Sheet Menu Drawer */}
@@ -119,9 +177,9 @@ export default function MobileBottomNav({
                   <Menu size={16} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '1rem', color: '#fff' }}>Menu de Módulos Clínicos</h4>
+                  <h4 style={{ fontSize: '1rem', color: '#fff', margin: 0 }}>Menu do Sistema</h4>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Acesso rápido a todos os ambientes e governança
+                    {isAdmin ? 'Administração e Governança Clínica' : 'Módulos Clínicos e Acompanhamento'}
                   </span>
                 </div>
               </div>
@@ -153,12 +211,16 @@ export default function MobileBottomNav({
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  onOpenTransferModal();
+                  if (isAdmin) {
+                    if (onOpenCreateInvite) onOpenCreateInvite('professional');
+                  } else {
+                    onOpenTransferModal();
+                  }
                 }}
                 style={{ flexDirection: 'column', gap: '4px', padding: '0.6rem 0.25rem', fontSize: '0.72rem' }}
               >
-                <ArrowRightLeft size={16} />
-                <span>Transferir</span>
+                {isAdmin ? <UserPlus size={16} /> : <ArrowRightLeft size={16} />}
+                <span>{isAdmin ? 'Convite' : 'Transferir'}</span>
               </button>
 
               {currentUser ? (
@@ -194,16 +256,16 @@ export default function MobileBottomNav({
               )}
             </div>
 
-            {/* Clinical & Administrative Modules List */}
+            {/* Modules List */}
             <div className="drawer-menu-list">
               <button
-                className={`drawer-menu-item ${activeTab === 'analytics' ? 'active' : ''}`}
-                onClick={() => handleTabClick('analytics')}
+                className={`drawer-menu-item ${activeTab === 'invites' ? 'active' : ''}`}
+                onClick={() => handleTabClick('invites')}
               >
-                <BarChart3 size={18} color="#38bdf8" />
+                <UserPlus size={18} color="#34d399" />
                 <div className="drawer-menu-text">
-                  <strong>Heatmaps & Análise Multivariada</strong>
-                  <span>Mapas de calor de intensidade, prazer e dever</span>
+                  <strong>Central de Convites</strong>
+                  <span>Emissão de códigos e onboarding de novos usuários/pacientes</span>
                 </div>
               </button>
 
@@ -211,7 +273,7 @@ export default function MobileBottomNav({
                 className={`drawer-menu-item ${activeTab === 'public_square' ? 'active' : ''}`}
                 onClick={() => handleTabClick('public_square')}
               >
-                <Globe size={18} color="#34d399" />
+                <Globe size={18} color="#38bdf8" />
                 <div className="drawer-menu-text">
                   <strong>Praça Pública & Manejo de Pacientes</strong>
                   <span>Acolhimento livre e resgate com PIN de 4 dígitos</span>
@@ -229,29 +291,30 @@ export default function MobileBottomNav({
                 </div>
               </button>
 
-              <button
-                className={`drawer-menu-item ${activeTab === 'health' ? 'active' : ''}`}
-                onClick={() => handleTabClick('health')}
-              >
-                <HeartHandshake size={18} color="#fb7171" />
-                <div className="drawer-menu-text">
-                  <strong>Saúde do Terapeuta & Check-in</strong>
-                  <span>Monitoramento de burnout, sono e vigor clínico</span>
-                </div>
-              </button>
+              {!isAdmin && (
+                <>
+                  <button
+                    className={`drawer-menu-item ${activeTab === 'analytics' ? 'active' : ''}`}
+                    onClick={() => handleTabClick('analytics')}
+                  >
+                    <BarChart3 size={18} color="#38bdf8" />
+                    <div className="drawer-menu-text">
+                      <strong>Heatmaps & Análise Multivariada</strong>
+                      <span>Mapas de calor de intensidade, prazer e dever</span>
+                    </div>
+                  </button>
 
-              {isAdmin && (
-                <button
-                  className={`drawer-menu-item ${activeTab === 'scepter' ? 'active' : ''}`}
-                  onClick={() => handleTabClick('scepter')}
-                  style={{ background: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)' }}
-                >
-                  <Crown size={18} color="#f59e0b" />
-                  <div className="drawer-menu-text">
-                    <strong style={{ color: '#fbbf24' }}>Cetro & Governança Master</strong>
-                    <span>Justa transmitida, praça do cetro e livro de atas</span>
-                  </div>
-                </button>
+                  <button
+                    className={`drawer-menu-item ${activeTab === 'health' ? 'active' : ''}`}
+                    onClick={() => handleTabClick('health')}
+                  >
+                    <HeartHandshake size={18} color="#fb7171" />
+                    <div className="drawer-menu-text">
+                      <strong>Saúde do Terapeuta & Check-in</strong>
+                      <span>Monitoramento de burnout, sono e vigor clínico</span>
+                    </div>
+                  </button>
+                </>
               )}
 
               {isAdmin && (

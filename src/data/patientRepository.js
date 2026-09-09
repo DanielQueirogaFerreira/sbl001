@@ -3,7 +3,7 @@
  * Laboratório da Sobriedade
  */
 
-import { MASTER_FORMS_DATA } from './masterDatabase';
+import { MASTER_FORMS_DATA } from './masterDatabase.js';
 
 // Initial cohort profiles
 export const INITIAL_PATIENTS = [

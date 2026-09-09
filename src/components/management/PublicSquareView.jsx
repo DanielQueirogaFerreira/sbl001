@@ -25,17 +25,28 @@ export default function PublicSquareView({ currentProfessional, onRefresh }) {
   const [claimMsg, setClaimMsg] = useState('');
   const [claimError, setClaimError] = useState('');
 
+  const [publicPinPrompts, setPublicPinPrompts] = useState({}); // patientId -> pin input
+  const [activePinPatientId, setActivePinPatientId] = useState(null);
+
   const publicPatients = getPublicSquarePatients();
   const secretPatients = getSecretTransferPatients();
   const auditLogs = getTransferAuditLogs();
 
-  const handleClaimPublic = (patientId) => {
+  const handleClaimPublic = (patientId, requiresPin = false) => {
     setClaimMsg('');
     setClaimError('');
 
-    const res = claimFromPublicSquare(patientId, currentProfessional?.id || 'PLN00001');
+    if (requiresPin && !activePinPatientId) {
+      setActivePinPatientId(patientId);
+      return;
+    }
+
+    const pinToSubmit = publicPinPrompts[patientId] || null;
+    const res = claimFromPublicSquare(patientId, currentProfessional?.id || 'PLN00001', pinToSubmit);
     if (res.success) {
       setClaimMsg(`Paciente ${res.patient.name} vinculado com sucesso à sua tutela clínica!`);
+      setActivePinPatientId(null);
+      setPublicPinPrompts(prev => ({ ...prev, [patientId]: '' }));
       onRefresh();
     } else {
       setClaimError(res.error);
@@ -54,7 +65,7 @@ export default function PublicSquareView({ currentProfessional, onRefresh }) {
 
     const res = claimSecretTransfer(patientOrTrfId, pinCode, currentProfessional?.id || 'PLN00001');
     if (res.success) {
-      setClaimMsg(`Transferência privada concluída! ${res.patient.name} agora está sob sua tutela.`);
+      setClaimMsg(`Transferência secreta autenticada! ${res.patient.name} agora está sob sua tutela.`);
       setPatientOrTrfId('');
       setPinCode('');
       onRefresh();
@@ -101,7 +112,7 @@ export default function PublicSquareView({ currentProfessional, onRefresh }) {
       )}
 
       {/* Main Grid: Left Public Square, Right Private Claim */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
         {/* Left: Public Square List */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card-header">
@@ -112,7 +123,7 @@ export default function PublicSquareView({ currentProfessional, onRefresh }) {
               <div>
                 <h3>Praça Pública de Pacientes ({publicPatients.length})</h3>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Prontuários sem vínculo abertos para acolhimento imediato
+                  Prontuários liberados para acolhimento (livres ou protegidos por PIN)
                 </p>
               </div>
             </div>
@@ -128,46 +139,92 @@ export default function PublicSquareView({ currentProfessional, onRefresh }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {publicPatients.map(p => (
-                <div 
-                  key={p.id} 
-                  className="shift-box"
-                  style={{
-                    padding: '1.1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <div style={{ fontSize: '2rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 'var(--radius-md)' }}>
-                      {p.avatar}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{p.name}</h4>
-                        <span className="badge badge-prazer">Disponível</span>
-                      </div>
-                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        {p.diagnosis}
-                      </p>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                        Protocolo: <strong>{p.protocolId || 'PRT001'}</strong> • Prontuários: {p.logs?.length || 0}
-                      </div>
-                    </div>
-                  </div>
+              {publicPatients.map(p => {
+                const requiresPin = Boolean(p.transferState?.pin);
+                const isEnteringPin = activePinPatientId === p.id;
 
-                  <button 
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleClaimPublic(p.id)}
-                    title="Vincular paciente sob meus cuidados clínicos"
+                return (
+                  <div 
+                    key={p.id} 
+                    className="shift-box"
+                    style={{
+                      padding: '1.1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.85rem',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: requiresPin ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(16, 185, 129, 0.3)'
+                    }}
                   >
-                    <UserPlus size={14} /> Acolher & Vincular
-                  </button>
-                </div>
-              ))}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <div style={{ fontSize: '2rem', background: 'rgba(255,255,255,0.05)', padding: '0.3rem', borderRadius: 'var(--radius-md)' }}>
+                          {p.avatar}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{p.name}</h4>
+                            <span className={requiresPin ? 'badge badge-misto' : 'badge badge-prazer'} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {requiresPin ? <><Lock size={11} /> PIN Requerido</> : 'Acesso Livre'}
+                            </span>
+                          </div>
+                          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            {p.diagnosis}
+                          </p>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                            Protocolo: <strong>{p.protocolId || 'PRT001'}</strong> • Prontuários: {p.logs?.length || 0}
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isEnteringPin && (
+                        <button 
+                          className={`btn ${requiresPin ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                          onClick={() => handleClaimPublic(p.id, requiresPin)}
+                          title="Vincular paciente sob meus cuidados clínicos"
+                          style={{ flexShrink: 0 }}
+                        >
+                          {requiresPin ? <><Lock size={13} /> Inserir PIN</> : <><UserPlus size={14} /> Acolher</>}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Inline PIN Entry for Protected Patients */}
+                    {isEnteringPin && (
+                      <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: 'var(--radius-md)', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Key size={13} color="#f59e0b" /> Digite o PIN de 4 dígitos informado pelo profissional anterior:
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input
+                            type="text"
+                            maxLength={4}
+                            className="form-input"
+                            placeholder="4 dígitos"
+                            value={publicPinPrompts[p.id] || ''}
+                            onChange={e => setPublicPinPrompts({ ...publicPinPrompts, [p.id]: e.target.value.replace(/\D/g, '') })}
+                            style={{ maxWidth: '140px', textAlign: 'center', letterSpacing: '0.2em', fontFamily: 'var(--font-mono)', fontSize: '1rem', padding: '0.35rem' }}
+                            autoFocus
+                          />
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleClaimPublic(p.id, true)}
+                            disabled={!(publicPinPrompts[p.id]?.length === 4)}
+                          >
+                            Confirmar & Acolher
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setActivePinPatientId(null)}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

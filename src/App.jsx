@@ -23,6 +23,11 @@ import SyntheticDataLab from './components/admin/SyntheticDataLab';
 import VersionBadge from './components/common/VersionBadge';
 import MobileBottomNav from './components/layout/MobileBottomNav';
 
+// Invite System Components
+import CreateInviteModal from './components/invites/CreateInviteModal';
+import RedeemInviteModal from './components/invites/RedeemInviteModal';
+import InvitesManagerView from './components/invites/InvitesManagerView';
+
 import { 
   getAllPatients, 
   getPatientById, 
@@ -34,21 +39,27 @@ import {
 import { getCurrentSession, setCurrentSession } from './services/authRepository';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => getCurrentSession());
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
+
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('amanda');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const session = getCurrentSession();
+    const isAdm = session?.role === 'admin' || session?.role === 'admin_master';
+    return isAdm ? 'scepter' : 'dashboard';
+  });
   const [timeframe, setTimeframe] = useState('all');
   const [dataSourceFilter, setDataSourceFilter] = useState('all'); // 'all' | 'RD' | 'SD'
-  const [isVerticalMode, setIsVerticalMode] = useState(true); // Default: 9:16 Vertical Smartphone priority
-
-  // User session state
-  const [currentUser, setCurrentUser] = useState(() => getCurrentSession());
 
   // Modals state
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isCreateInviteOpen, setIsCreateInviteOpen] = useState(false);
+  const [createInviteType, setCreateInviteType] = useState(isAdmin ? 'professional' : 'patient');
+  const [isRedeemInviteOpen, setIsRedeemInviteOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Initialize and refresh patients
@@ -63,9 +74,38 @@ export default function App() {
     setCurrentUser(session);
   }, [refreshKey]);
 
-  const activePatient = getPatientById(selectedPatientId) || patients[0];
+  // Auto-switch tabs if switching between Admin and Professional
+  useEffect(() => {
+    const isAdm = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
+    const clinicalTabs = ['dashboard', 'routine', 'logger', 'swot', 'analytics', 'health'];
+    if (isAdm && clinicalTabs.includes(activeTab)) {
+      setActiveTab('scepter');
+    } else if (!isAdm && (activeTab === 'scepter' || activeTab === 'synthetic')) {
+      setActiveTab('dashboard');
+    }
+  }, [currentUser]);
+
+  // For Admins: No clinical patient pills in header or clinical dashboard
+  // For Professionals: Only patients assigned to this professional (e.g. Dr. Plínio)
+  const visiblePatients = isAdmin 
+    ? [] 
+    : patients.filter(p => p.assignedProfessionalId === currentUser?.id);
+
+  // Keep selectedPatientId valid for the active professional
+  useEffect(() => {
+    if (!isAdmin && visiblePatients.length > 0) {
+      if (!visiblePatients.some(p => p.id === selectedPatientId)) {
+        setSelectedPatientId(visiblePatients[0].id);
+      }
+    }
+  }, [visiblePatients, isAdmin, selectedPatientId]);
+
+  const activePatient = !isAdmin 
+    ? (visiblePatients.find(p => p.id === selectedPatientId) || visiblePatients[0] || null) 
+    : null;
+
   const activeLogs = activePatient 
-    ? getPatientLogs(selectedPatientId, timeframe, false, dataSourceFilter)
+    ? getPatientLogs(activePatient.id, timeframe, false, dataSourceFilter)
     : [];
   const weeklyRoutines = activePatient?.weeklyPlanned || {};
 
@@ -95,11 +135,16 @@ export default function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleOpenCreateInvite = (type) => {
+    setCreateInviteType(type || (isAdmin ? 'professional' : 'patient'));
+    setIsCreateInviteOpen(true);
+  };
+
   return (
-    <div className={`app-container ${isVerticalMode ? 'vertical-canvas' : 'expanded'}`}>
+    <div className="app-container vertical-canvas">
       {/* Top Application Header */}
       <Header
-        patients={patients}
+        patients={visiblePatients}
         selectedPatientId={selectedPatientId}
         onSelectPatient={setSelectedPatientId}
         currentUser={currentUser}
@@ -108,8 +153,8 @@ export default function App() {
         onOpenTransfer={() => setIsTransferModalOpen(true)}
         onOpenNewLogModal={() => setActiveTab('logger')}
         onOpenAiDumpModal={() => setIsAiModalOpen(true)}
-        isVerticalMode={isVerticalMode}
-        onToggleVerticalMode={() => setIsVerticalMode(prev => !prev)}
+        onOpenCreateInvite={handleOpenCreateInvite}
+        onOpenRedeemInvite={() => setIsRedeemInviteOpen(true)}
       />
 
       {/* Main Tab Navigation */}
@@ -121,8 +166,8 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="main-content">
-        {/* Global Filter Bar (visible for analytics, swot and dashboard tabs) */}
-        {(activeTab === 'dashboard' || activeTab === 'swot' || activeTab === 'analytics') && (
+        {/* Global Filter Bar (visible for analytics, swot and dashboard tabs when a patient is active) */}
+        {!isAdmin && activePatient && (activeTab === 'dashboard' || activeTab === 'swot' || activeTab === 'analytics') && (
           <FilterToolbar
             timeframe={timeframe}
             onSelectTimeframe={setTimeframe}
@@ -134,7 +179,7 @@ export default function App() {
         )}
 
         {/* Tab Views */}
-        {activeTab === 'dashboard' && activePatient && (
+        {activeTab === 'dashboard' && !isAdmin && activePatient && (
           <OverviewDashboard
             patient={activePatient}
             logs={activeLogs}
@@ -143,7 +188,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'routine' && activePatient && (
+        {activeTab === 'routine' && !isAdmin && activePatient && (
           <RoutineManager
             patient={activePatient}
             weeklyRoutines={weeklyRoutines}
@@ -152,7 +197,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'logger' && activePatient && (
+        {activeTab === 'logger' && !isAdmin && activePatient && (
           <DailyShiftLogger
             patient={activePatient}
             weeklyRoutines={weeklyRoutines}
@@ -161,7 +206,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'swot' && activePatient && (
+        {activeTab === 'swot' && !isAdmin && activePatient && (
           <SwotAnalysisView
             patient={activePatient}
             logs={activeLogs}
@@ -171,10 +216,17 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'analytics' && activePatient && (
+        {activeTab === 'analytics' && !isAdmin && activePatient && (
           <HeatmapAndCharts
             patient={activePatient}
             logs={activeLogs}
+          />
+        )}
+
+        {activeTab === 'invites' && (
+          <InvitesManagerView
+            currentUser={currentUser}
+            onOpenCreateInvite={() => handleOpenCreateInvite(isAdmin ? 'professional' : 'patient')}
           />
         )}
 
@@ -192,21 +244,21 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'health' && (
+        {activeTab === 'health' && !isAdmin && (
           <ProfessionalHealthView
             currentProfessional={currentUser}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
           />
         )}
 
-        {activeTab === 'scepter' && (
+        {activeTab === 'scepter' && isAdmin && (
           <ScepterControlPanel
             currentUser={currentUser}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
           />
         )}
 
-        {activeTab === 'synthetic' && (
+        {activeTab === 'synthetic' && isAdmin && (
           <SyntheticDataLab
             onRefresh={() => setRefreshKey(prev => prev + 1)}
           />
@@ -232,6 +284,10 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+        onOpenRedeemInvite={() => {
+          setIsLoginModalOpen(false);
+          setIsRedeemInviteOpen(true);
+        }}
       />
 
       {/* User Profile Modal */}
@@ -267,6 +323,26 @@ export default function App() {
         />
       )}
 
+      {/* Invite System Modals */}
+      <CreateInviteModal
+        isOpen={isCreateInviteOpen}
+        onClose={() => setIsCreateInviteOpen(false)}
+        issuer={currentUser}
+        initialType={createInviteType}
+        onInviteCreated={() => setRefreshKey(prev => prev + 1)}
+      />
+
+      <RedeemInviteModal
+        isOpen={isRedeemInviteOpen}
+        onClose={() => setIsRedeemInviteOpen(false)}
+        onRedeemed={(res) => {
+          setRefreshKey(prev => prev + 1);
+          if (res.user) {
+            setCurrentUser(res.user);
+          }
+        }}
+      />
+
       {/* App Footer */}
       <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '1.25rem 1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         <p>
@@ -284,6 +360,7 @@ export default function App() {
         onOpenTransferModal={() => setIsTransferModalOpen(true)}
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onOpenCreateInvite={handleOpenCreateInvite}
       />
 
       {/* Technical Version Badge with Text Scrim (Bottom Left) */}

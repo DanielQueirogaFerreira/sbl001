@@ -4,8 +4,8 @@
  * Laboratório da Sobriedade
  */
 
-import { getDatabase, saveDatabaseState } from '../data/patientRepository';
-import { getUserById } from './authRepository';
+import { getDatabase, saveDatabaseState } from '../data/patientRepository.js';
+import { getUserById } from './authRepository.js';
 
 const TRANSFER_LOGS_KEY = 'sbl_patient_transfer_audit_logs';
 
@@ -143,9 +143,9 @@ export function initiateSecretTransfer(patientId, fromProfessionalId, customPin 
 }
 
 /**
- * Releases patient to Public Square (no PIN required, open for any professional)
+ * Releases patient to Public Square (with optional 4-digit PIN protection or open freely)
  */
-export function releaseToPublicSquare(patientId, fromProfessionalId) {
+export function releaseToPublicSquare(patientId, fromProfessionalId, customPin = null) {
   const db = getDatabase();
   const patient = db[patientId];
   if (!patient) {
@@ -153,10 +153,12 @@ export function releaseToPublicSquare(patientId, fromProfessionalId) {
   }
 
   const sender = getUserById(fromProfessionalId);
+  const pin = customPin ? String(customPin).trim().padStart(4, '0') : null;
 
   patient.assignedProfessionalId = null;
   patient.transferState = {
     mode: 'public',
+    pin: pin,
     fromProfessionalId: fromProfessionalId,
     initiatedAt: new Date().toISOString()
   };
@@ -169,22 +171,43 @@ export function releaseToPublicSquare(patientId, fromProfessionalId) {
     fromProfessionalId: fromProfessionalId,
     fromProfessionalName: sender?.name || fromProfessionalId,
     toProfessionalId: null,
-    toProfessionalName: 'Praça Pública (Disponível a Todos)',
+    toProfessionalName: pin ? 'Praça Pública (Protegida com PIN)' : 'Praça Pública (Livre)',
     mode: 'released_to_public',
-    note: 'Paciente liberado para acolhimento na Praça Pública.'
+    note: pin 
+      ? `Paciente liberado na Praça Pública protegido por PIN de 4 dígitos.`
+      : 'Paciente liberado para acolhimento livre na Praça Pública.'
   });
 
-  return { success: true, patient };
+  return { success: true, patient, pin };
 }
 
 /**
- * Claims a patient from Public Square
+ * Claims a patient from Public Square (verifying 4-digit PIN if patient is PIN-protected)
  */
-export function claimFromPublicSquare(patientId, toProfessionalId) {
+export function claimFromPublicSquare(patientId, toProfessionalId, pinEntered = null) {
   const db = getDatabase();
   const patient = db[patientId];
   if (!patient) {
     return { success: false, error: 'Paciente não encontrado.' };
+  }
+
+  // Check if patient requires PIN in public square
+  if (patient.transferState?.pin) {
+    const cleanPin = (pinEntered || '').trim();
+    if (!cleanPin) {
+      return { 
+        success: false, 
+        requiresPin: true, 
+        error: 'Este paciente está protegido por PIN de 4 dígitos na praça. Insira o PIN para acolher.' 
+      };
+    }
+    if (patient.transferState.pin !== cleanPin) {
+      return { 
+        success: false, 
+        requiresPin: true, 
+        error: 'PIN de 4 dígitos incorreto! Solicite o PIN correto ao profissional de origem.' 
+      };
+    }
   }
 
   const previousOwner = patient.transferState?.fromProfessionalId || 'Praça Pública';

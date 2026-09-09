@@ -29,9 +29,14 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
         setError(res.error);
       }
     } else {
-      const res = releaseToPublicSquare(patient.id, currentProfessional?.id || 'PLN00001');
+      let pin = customPin.trim();
+      if (pin && (pin.length !== 4 || isNaN(Number(pin)))) {
+        setError('Caso deseje proteger a vaga na praça, o PIN deve ter exatamente 4 dígitos numéricos.');
+        return;
+      }
+      const res = releaseToPublicSquare(patient.id, currentProfessional?.id || 'PLN00001', pin || null);
       if (res.success) {
-        setResult({ isPublic: true, patientName: patient.name });
+        setResult({ isPublic: true, patientName: patient.name, pin: res.pin });
         onTransferInitiated();
       } else {
         setError(res.error);
@@ -41,7 +46,9 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
 
   const copyToClipboard = () => {
     if (result && result.pin) {
-      const text = `Laboratório da Sobriedade — Transferência de Paciente\nPaciente: ${result.patientName}\nCódigo de Transferência: ${result.transferCode}\nPIN Secreto (4 Dígitos): ${result.pin}`;
+      const modeText = result.isPublic ? 'Praça Pública (Protegida)' : 'Transferência Secreta Privada';
+      const codeText = result.transferCode ? `Código: ${result.transferCode}\n` : '';
+      const text = `Laboratório da Sobriedade — Manejo de Paciente (${modeText})\nPaciente: ${result.patientName}\n${codeText}PIN de 4 Dígitos: ${result.pin}`;
       navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -78,7 +85,7 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
           {!result ? (
             <div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-                Selecione a modalidade de migração para transferir a responsabilidade e o acompanhamento de <strong>{patient.name}</strong> para outro profissional de saúde:
+                Selecione a modalidade de migração para liberar a responsabilidade clínica de <strong>{patient.name}</strong> para outros profissionais credenciados:
               </p>
 
               {/* Mode Selector */}
@@ -97,10 +104,10 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                     <Lock size={16} color="#38bdf8" />
-                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Transferência Secreta</strong>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Troca Secreta</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Protegida por <strong>PIN numérico de 4 dígitos</strong> e código gerado pelo sistema. O paciente só é resgatado por quem possuir o PIN.
+                    Privada. O paciente não aparece na praça aberta. O acolhimento exige o <strong>Código TRF + PIN de 4 dígitos</strong>.
                   </p>
                 </button>
 
@@ -118,39 +125,41 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                     <Globe size={16} color="var(--color-prazer-light)" />
-                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Praça Pública</strong>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Troca Pública</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    O paciente fica disponível publicamente na lista de migração para que <strong>qualquer profissional credenciado</strong> assuma seu cuidado.
+                    O paciente fica visível na <strong>Praça Pública</strong> para todos os profissionais (livre ou protegido por PIN).
                   </p>
                 </button>
               </div>
 
-              {transferType === 'secret' && (
-                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Key size={14} color="#38bdf8" /> Definir PIN de 4 Dígitos Numéricos (Opcional):
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    className="form-input"
-                    placeholder="Ex: 4892 (ou deixe vazio para gerar automaticamente)"
-                    value={customPin}
-                    onChange={e => setCustomPin(e.target.value.replace(/\D/g, ''))}
-                  />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    O profissional receptor precisará digitar este código para resgatar o paciente.
-                  </span>
-                </div>
-              )}
+              {/* PIN input for both secret and public */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Key size={14} color={transferType === 'secret' ? '#38bdf8' : '#34d399'} /> 
+                  {transferType === 'secret' ? 'Definir PIN de 4 Dígitos Numéricos (Opcional):' : 'Proteger Vaga Pública com PIN de 4 Dígitos (Opcional):'}
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  className="form-input"
+                  placeholder={transferType === 'secret' ? 'Ex: 4892 (ou deixe vazio para gerar automático)' : 'Deixe vazio para Praça Livre ou digite 4 dígitos'}
+                  value={customPin}
+                  onChange={e => setCustomPin(e.target.value.replace(/\D/g, ''))}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {transferType === 'secret' 
+                    ? 'O terapeuta receptor precisará do Código TRF gerado e deste PIN para resgatar.' 
+                    : 'Se informado, outros profissionais só conseguirão acolher da praça informando este PIN.'}
+                </span>
+              </div>
 
               <button
                 className={`btn ${transferType === 'secret' ? 'btn-ai' : 'btn-primary'}`}
                 style={{ width: '100%' }}
                 onClick={handleStartTransfer}
               >
-                {transferType === 'secret' ? 'Gerar PIN & Iniciar Transferência Secreta' : 'Liberar Paciente para a Praça Pública'}
+                {transferType === 'secret' ? 'Gerar PIN & Abrir Troca Secreta' : 'Liberar Paciente para a Praça Pública'}
               </button>
             </div>
           ) : (
@@ -164,8 +173,24 @@ export default function PatientTransferModal({ isOpen, onClose, patient, current
                 <div>
                   <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Paciente Liberado na Praça Pública!</h4>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
-                    <strong>{result.patientName}</strong> agora está disponível na lista pública de migração para ser acolhido por qualquer terapeuta ou profissional credenciado.
+                    <strong>{result.patientName}</strong> agora está disponível na Praça Pública para ser acolhido por profissionais credenciados.
                   </p>
+                  {result.pin && (
+                    <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: 'var(--radius-lg)', padding: '1rem', marginBottom: '1.25rem' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>VAGA PROTEGIDA POR PIN DE 4 DÍGITOS:</span>
+                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-prazer-light)', letterSpacing: '0.2em', fontFamily: 'var(--font-mono)' }}>
+                        {result.pin}
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.3rem 0 0 0' }}>
+                        Repasse este PIN para o profissional que for acolher na praça.
+                      </p>
+                    </div>
+                  )}
+                  {result.pin && (
+                    <button className="btn btn-secondary btn-sm" onClick={copyToClipboard} style={{ marginBottom: '1rem' }}>
+                      {copied ? <><CheckCircle2 size={14} /> Copiado!</> : <><Copy size={14} /> Copiar PIN de Acolhimento</>}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div>
