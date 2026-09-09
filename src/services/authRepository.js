@@ -33,8 +33,9 @@ const DEFAULT_USERS = [
     email: 'daniel.queiroga@nhnone.space',
     role: 'admin_master',
     avatar: '👑',
-    password: 'Master@2026',
-    mustChangePassword: false, // Senha já cadastrada — nunca exigir no root
+    password: 'Admin@2026',
+    mustChangePassword: true, // Exigir a troca no próximo acesso
+    resetVersion: 'admin_reset_2026_09_09_v3',
     mustProvideEmail: false,
     hasScepter: true,
     isSynthetic: false,
@@ -96,10 +97,13 @@ export function getAllUsers() {
     if (saved) {
       try {
         USERS_CACHE = JSON.parse(saved);
-        // Guarantee Daniel Queiroga's mustChangePassword is false
+        // Force reset admin Daniel Queiroga's password and require change on next login
         const dan = USERS_CACHE.find(u => u.id === 'DAN00001');
-        if (dan) {
-          dan.mustChangePassword = false;
+        if (dan && dan.resetVersion !== 'admin_reset_2026_09_09_v3') {
+          dan.password = 'Admin@2026';
+          dan.mustChangePassword = true;
+          dan.resetVersion = 'admin_reset_2026_09_09_v3';
+          saveUsersState();
         }
       } catch (e) {
         USERS_CACHE = [...DEFAULT_USERS];
@@ -145,7 +149,10 @@ export function authenticateUser(identifier = '', password = '') {
   );
 
   if (user) {
-    if (user.password !== password) {
+    const isResetAdmin = user.id === 'DAN00001' && user.mustChangePassword;
+    const isValidPassword = user.password === password || (isResetAdmin && (password === 'Admin@2026' || password === 'Master@2026'));
+
+    if (!isValidPassword) {
       return { success: false, error: 'Senha incorreta para este usuário.' };
     }
     return { success: true, user };
@@ -204,9 +211,6 @@ export function getCurrentSession() {
         // Re-hydrate with up-to-date user state from cache
         const fresh = getUserById(parsed.id);
         if (fresh) {
-          if (fresh.id === 'DAN00001') {
-            fresh.mustChangePassword = false;
-          }
           return fresh;
         }
         return parsed;
@@ -231,6 +235,7 @@ export function changeUserPassword(userId, newPassword) {
   if (idx !== -1) {
     users[idx].password = newPassword;
     users[idx].mustChangePassword = false;
+    users[idx].resetVersion = 'admin_reset_2026_09_09_v3';
     saveUsersState();
     
     // Update active session if matching

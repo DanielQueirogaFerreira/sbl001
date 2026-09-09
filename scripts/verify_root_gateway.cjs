@@ -40,15 +40,33 @@ async function run() {
   }
   console.log('✓ Test 1: Root default session is null (Root Gateway displays cleanly without password prompt)');
 
-  // Test 2: Master Admin Daniel Queiroga credentials & flags
-  const authAdmin = authenticateUser('DAN00001', 'Master@2026');
+  // Test 2: Master Admin Daniel Queiroga reset credentials & mustChangePassword flag
+  const authAdmin = authenticateUser('DAN00001', 'Admin@2026');
   if (!authAdmin.success || !authAdmin.user) {
     throw new Error(`Master Admin auth failed: ${authAdmin.error}`);
   }
-  if (authAdmin.user.mustChangePassword === true) {
-    throw new Error('Master Admin mustChangePassword is unexpectedly true!');
+  if (authAdmin.user.mustChangePassword !== true) {
+    throw new Error('Master Admin mustChangePassword must be true to enforce password change on next login!');
   }
-  console.log('✓ Test 2: Master Admin Daniel Queiroga authenticated successfully with mustChangePassword === false');
+  console.log('✓ Test 2a: Master Admin Daniel Queiroga authenticated successfully with Admin@2026 and mustChangePassword === true');
+
+  // Test 2b: Password change flow
+  const { changeUserPassword } = await import('../src/services/authRepository.js');
+  const changed = changeUserPassword('DAN00001', 'NovaSenha@2026');
+  if (!changed.success || changed.user.mustChangePassword !== false) {
+    throw new Error('Password change failed to set mustChangePassword to false');
+  }
+  const authChanged = authenticateUser('DAN00001', 'NovaSenha@2026');
+  if (!authChanged.success) {
+    throw new Error('Authentication with new changed password failed!');
+  }
+  console.log('✓ Test 2b: Password change flow executed and validated with new credentials');
+
+  // Reset back to temporary Admin@2026 with mustChangePassword = true for live use
+  changeUserPassword('DAN00001', 'Admin@2026');
+  const allUsers = getAllUsers();
+  const d = allUsers.find(u => u.id === 'DAN00001');
+  d.mustChangePassword = true;
 
   // Test 3: Authority Onboarding Sequences
   // 3a. Admin -> Professional (PRF-XXXX)

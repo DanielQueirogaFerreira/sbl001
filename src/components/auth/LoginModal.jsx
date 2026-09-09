@@ -99,6 +99,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
         </div>
 
         <div className="modal-body">
+          {targetRole === 'admin' && (
+            <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.78rem', color: '#fbbf24', lineHeight: 1.4 }}>
+              🔑 <strong>Senha Temporária do Administrador:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.4)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>Admin@2026</code> (a troca por uma nova senha pessoal será exigida imediatamente).
+            </div>
+          )}
+
           {error && (
             <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 'var(--radius-md)', color: '#fca5a5', fontSize: '0.85rem', marginBottom: '1rem' }}>
               {error}
@@ -176,7 +182,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
                         Daniel Queiroga <span style={{ marginLeft: '0.25rem' }}>👑</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Código: <strong style={{ color: '#38bdf8' }}>DAN00001</strong> • Master Admin
+                        Código: <strong style={{ color: '#38bdf8' }}>DAN00001</strong> • Senha: <strong style={{ color: '#fbbf24' }}>Admin@2026</strong>
                       </div>
                     </div>
                   </div>
