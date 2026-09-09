@@ -91,12 +91,13 @@ export default function RoutineManager({
       </div>
 
       {/* Main Grid: Days Navigation & Shift Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '1.5rem' }}>
-        {/* Left Column: 7 Days Navigation Pills */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', height: 'fit-content' }}>
-          <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+      <div className="routine-layout-grid">
+        {/* Days Navigation: Horizontal Chips on Mobile, Vertical Pills on Desktop */}
+        <div className="glass-card days-nav-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', height: 'fit-content' }}>
+          <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem', letterSpacing: '0.05em' }}>
             Dias da Semana
           </h4>
+          <div className="days-pill-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {DAYS_OF_WEEK.map(day => {
             const isSelected = selectedDay === day;
             const hasData = weeklyRoutines[day] && (weeklyRoutines[day].manha || weeklyRoutines[day].tarde || weeklyRoutines[day].noite);
@@ -129,6 +130,7 @@ export default function RoutineManager({
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Right Column: Planned vs As-Built Details */}

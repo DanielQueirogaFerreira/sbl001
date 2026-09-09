@@ -23,6 +23,7 @@ import {
   getScepterAuditLogs 
 } from '../../services/scepterEngine';
 import { getAllUsers, createSubordinateAdmin, createSyntheticUser } from '../../services/authRepository';
+import PasswordInput from '../common/PasswordInput';
 import AdminArenaJusta from './AdminArenaJusta';
 
 export default function ScepterControlPanel({ currentUser, onRefresh }) {
@@ -458,12 +459,11 @@ export default function ScepterControlPanel({ currentUser, onRefresh }) {
 
               <div className="form-group">
                 <label className="form-label">Senha do Master Atual para Confirmação:</label>
-                <input 
-                  type="password"
-                  className="form-input"
+                <PasswordInput
                   placeholder="••••••••"
                   value={masterPassword}
                   onChange={e => setMasterPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
               </div>

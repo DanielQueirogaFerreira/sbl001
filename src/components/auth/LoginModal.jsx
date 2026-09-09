@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LogIn, Key, Shield, User, Sparkles, X, Check } from 'lucide-react';
 import { getAllUsers, authenticateUser, setCurrentSession } from '../../services/authRepository';
+import PasswordInput from '../common/PasswordInput';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [identifier, setIdentifier] = useState('');
@@ -72,12 +73,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
             <div className="form-group">
               <label className="form-label">Senha:</label>
-              <input
-                type="password"
-                className="form-input"
+              <PasswordInput
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
               />
             </div>
 

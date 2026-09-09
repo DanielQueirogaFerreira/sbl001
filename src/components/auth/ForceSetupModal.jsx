@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { changeUserPassword, registerUserEmail, getCurrentSession, setCurrentSession } from '../../services/authRepository';
+import PasswordInput from '../common/PasswordInput';
 
 export default function ForceSetupModal({ user, onComplete }) {
   const needsEmail = user?.mustProvideEmail || (!user?.email && user?.id === 'PLN00001');
@@ -134,24 +135,24 @@ export default function ForceSetupModal({ user, onComplete }) {
                   <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <Lock size={14} color="var(--color-prazer-light)" /> Nova Senha Pessoal:
                   </label>
-                  <input
-                    type="password"
-                    className="form-input"
+                  <PasswordInput
                     placeholder="Mínimo 6 caracteres"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
                     required
                   />
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Confirmação da Nova Senha:</label>
-                  <input
-                    type="password"
-                    className="form-input"
+                  <PasswordInput
                     placeholder="Repita a nova senha"
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
                     required
                   />
                 </div>

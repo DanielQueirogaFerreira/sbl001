@@ -27,9 +27,9 @@ export default function VersionBadge() {
       title="Selo Técnico de Versionamento — Clique para copiar metadados completos"
       style={{
         position: 'fixed',
-        bottom: '6px',
-        left: '8px',
-        zIndex: 9999,
+        bottom: 'calc(var(--bottom-nav-height, 64px) + var(--safe-area-bottom, 0px) + 6px)',
+        left: 'max(8px, calc(50% - min(var(--app-max-width-vertical, 540px), 100vw) / 2 + 8px))',
+        zIndex: 99,
         display: 'inline-flex',
         alignItems: 'center',
         gap: '5px',

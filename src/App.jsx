@@ -21,6 +21,7 @@ import ProfessionalHealthView from './components/health/ProfessionalHealthView';
 import ScepterControlPanel from './components/admin/ScepterControlPanel';
 import SyntheticDataLab from './components/admin/SyntheticDataLab';
 import VersionBadge from './components/common/VersionBadge';
+import MobileBottomNav from './components/layout/MobileBottomNav';
 
 import { 
   getAllPatients, 
@@ -38,6 +39,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [timeframe, setTimeframe] = useState('all');
   const [dataSourceFilter, setDataSourceFilter] = useState('all'); // 'all' | 'RD' | 'SD'
+  const [isVerticalMode, setIsVerticalMode] = useState(true); // Default: 9:16 Vertical Smartphone priority
 
   // User session state
   const [currentUser, setCurrentUser] = useState(() => getCurrentSession());
@@ -94,7 +96,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isVerticalMode ? 'vertical-canvas' : 'expanded'}`}>
       {/* Top Application Header */}
       <Header
         patients={patients}
@@ -106,6 +108,8 @@ export default function App() {
         onOpenTransfer={() => setIsTransferModalOpen(true)}
         onOpenNewLogModal={() => setActiveTab('logger')}
         onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+        isVerticalMode={isVerticalMode}
+        onToggleVerticalMode={() => setIsVerticalMode(prev => !prev)}
       />
 
       {/* Main Tab Navigation */}
@@ -264,11 +268,23 @@ export default function App() {
       )}
 
       {/* App Footer */}
-      <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '1.25rem 2rem', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+      <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '1.25rem 1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         <p>
-          Laboratório da Sobriedade © 2026 • Pesquisa e Desenvolvimento em Prevenção de Recaída • Ingestão Consolidada de 21 Formulários Google Forms • Protocolo do Plínio (PRT001)
+          Laboratório da Sobriedade © 2026 • Prevenção de Recaída • Protocolo do Plínio (PRT001)
         </p>
       </footer>
+
+      {/* Mobile-First Bottom Navigation Bar (Fixed 9:16 Thumb Navigation) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        currentUser={currentUser}
+        onOpenNewLogModal={() => setActiveTab('logger')}
+        onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+        onOpenTransferModal={() => setIsTransferModalOpen(true)}
+        onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+      />
 
       {/* Technical Version Badge with Text Scrim (Bottom Left) */}
       <VersionBadge />

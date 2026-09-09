@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Hash, Shield, Key, CheckCircle2, Lock, X, LogOut, Award } from 'lucide-react';
 import { changeUserPassword, logoutUser } from '../../services/authRepository';
 import { getAllPatients } from '../../data/patientRepository';
+import PasswordInput from '../common/PasswordInput';
 
 export default function UserProfileModal({ isOpen, onClose, user, onUserUpdated, onSwitchAccount }) {
   const [oldPassword, setOldPassword] = useState('');
@@ -160,44 +161,41 @@ export default function UserProfileModal({ isOpen, onClose, user, onUserUpdated,
             )}
 
             <form onSubmit={handleChangePass}>
-              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+              <div className="form-group" style={{ marginBottom: '0.85rem' }}>
                 <label className="form-label" style={{ fontSize: '0.8rem' }}>Senha Atual:</label>
-                <input
-                  type="password"
-                  className="form-input"
+                <PasswordInput
                   value={oldPassword}
                   onChange={e => setOldPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '0.85rem' }}>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>Nova Senha:</label>
-                  <input
-                    type="password"
-                    className="form-input"
+                  <PasswordInput
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="Mínimo 6 dígitos"
+                    autoComplete="new-password"
                     required
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>Confirmação:</label>
-                  <input
-                    type="password"
-                    className="form-input"
+                  <PasswordInput
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Repita a nova senha"
+                    autoComplete="new-password"
                     required
                   />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
+              <button type="submit" className="btn btn-secondary btn-sm" style={{ width: '100%', minHeight: '44px' }}>
                 <CheckCircle2 size={14} /> Atualizar Senha
               </button>
             </form>
