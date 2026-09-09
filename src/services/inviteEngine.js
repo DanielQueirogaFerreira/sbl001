@@ -268,6 +268,9 @@ export function redeemInvite(code, pin, payload) {
       logs: []
     };
 
+    newPatient.role = 'patient';
+    newPatient.code = invite.code;
+
     db[patientId] = newPatient;
     saveDatabaseState();
 
@@ -277,9 +280,23 @@ export function redeemInvite(code, pin, payload) {
     invite.acceptedPatientId = patientId;
     saveInvitesState(getAllInvites());
 
+    const patientUser = {
+      id: patientId,
+      code: invite.code,
+      name: cleanName,
+      role: 'patient',
+      avatar: '👤',
+      diagnosis: newPatient.diagnosis,
+      protocolId: newPatient.protocolId,
+      assignedProfessionalId: newPatient.assignedProfessionalId,
+      assignedProfessionalName: newPatient.assignedProfessionalName,
+      keyAnchors: newPatient.keyAnchors
+    };
+
     return {
       success: true,
       patient: newPatient,
+      user: patientUser,
       type: 'patient',
       message: `Paciente ${cleanName} cadastrado e vinculado com sucesso à tutela de ${invite.issuerName}!`
     };

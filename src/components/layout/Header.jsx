@@ -8,6 +8,7 @@ import {
   Key, 
   Crown, 
   LogIn,
+  LogOut,
   UserPlus,
   ShieldCheck,
   Stethoscope
@@ -24,10 +25,12 @@ export default function Header({
   onOpenNewLogModal,
   onOpenAiDumpModal,
   onOpenCreateInvite,
-  onOpenRedeemInvite
+  onOpenRedeemInvite,
+  onLogout
 }) {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
-  const currentPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
+  const isPatient = currentUser?.role === 'patient';
+  const isProfessional = currentUser?.role === 'professional';
 
   return (
     <header className="app-header">
@@ -41,12 +44,16 @@ export default function Header({
             <div className="brand-titles">
               <h1 style={{ fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
                 <span>Laboratório da Sobriedade</span>
-                <span className={`badge ${isAdmin ? 'badge-misto' : 'badge-prazer'}`} style={{ fontSize: '0.62rem', padding: '0.12rem 0.45rem' }}>
-                  {isAdmin ? (currentUser?.hasScepter ? '👑 Cetro Master' : '🛡️ Admin') : '🩺 Ambulatório'}
+                <span className={`badge ${isAdmin ? 'badge-misto' : (isPatient ? 'badge-brand' : 'badge-prazer')}`} style={{ fontSize: '0.62rem', padding: '0.12rem 0.45rem' }}>
+                  {isAdmin 
+                    ? (currentUser?.hasScepter ? '👑 Cetro Master' : '🛡️ Admin') 
+                    : (isPatient ? '👤 Paciente' : (currentUser ? '🩺 Ambulatório' : 'Portal'))}
                 </span>
               </h1>
               <p className="brand-tagline" style={{ fontSize: '0.7rem', margin: 0, opacity: 0.75 }}>
-                {isAdmin ? 'Gestão Administrativa & Protocolos' : 'Prevenção de Recaída • Protocolo do Plínio (PRT001)'}
+                {isAdmin 
+                  ? 'Gestão Administrativa & Governança' 
+                  : (isPatient ? 'Meu Espaço • Acompanhamento Terapêutico' : 'Prevenção de Recaída • Protocolo do Plínio (PRT001)')}
               </p>
             </div>
           </div>
@@ -56,7 +63,7 @@ export default function Header({
             <button
               className="btn btn-secondary btn-sm"
               onClick={onOpenRedeemInvite}
-              title="Resgatar Código de Convite Oficial"
+              title="Resgatar Código de Convite Oficial (PIN 4 Dígitos)"
               style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
             >
               <Key size={13} />
@@ -65,33 +72,47 @@ export default function Header({
 
             {/* Active User Session Pill */}
             {currentUser ? (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={onOpenProfile}
-                style={{
-                  background: currentUser.hasScepter ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)',
-                  borderColor: currentUser.hasScepter ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-subtle)',
-                  padding: '0.35rem 0.65rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-                title="Perfil do Usuário / Credenciais"
-              >
-                <span>{currentUser.avatar}</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, maxWidth: '85px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {currentUser.name.split(' ')[0]}
-                </span>
-                {currentUser.hasScepter && <Crown size={11} color="var(--color-misto-light)" />}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={onOpenProfile}
+                  style={{
+                    background: currentUser.hasScepter ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)',
+                    borderColor: currentUser.hasScepter ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-subtle)',
+                    padding: '0.35rem 0.65rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}
+                  title="Perfil do Usuário / Credenciais"
+                >
+                  <span>{currentUser.avatar || '👤'}</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, maxWidth: '85px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentUser.name.split(' ')[0]}
+                  </span>
+                  {currentUser.hasScepter && <Crown size={11} color="var(--color-misto-light)" />}
+                </button>
+
+                {/* Return to Portal / Logout Button */}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={onLogout}
+                  title="Sair da Conta / Voltar ao Portal Root"
+                  style={{ padding: '0.35rem 0.5rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}
+                >
+                  <LogOut size={13} />
+                  <span>Sair</span>
+                </button>
+              </div>
             ) : (
               <button
-                className="btn btn-secondary btn-sm"
+                className="btn btn-primary btn-sm"
                 onClick={onOpenLogin}
                 title="Entrar no Sistema"
+                style={{ padding: '0.35rem 0.65rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
               >
-                <LogIn size={14} />
-                <span style={{ fontSize: '0.75rem' }}>Entrar</span>
+                <LogIn size={13} />
+                <span>Entrar</span>
               </button>
             )}
           </div>
@@ -99,7 +120,23 @@ export default function Header({
 
         {/* Row 2: Role-Based Controls */}
         <div className="header-bottom-row">
-          {isAdmin ? (
+          {!currentUser ? (
+            /* UNAUTHENTICATED / ROOT GATEWAY BAR */
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <ShieldCheck size={14} color="#06b6d4" />
+                <span>Portal de Acesso • Onboarding por Convite Oficial</span>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={onOpenRedeemInvite}
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.74rem', color: '#38bdf8' }}
+              >
+                <Key size={13} />
+                <span>Ativar Convite</span>
+              </button>
+            </div>
+          ) : isAdmin ? (
             /* ADMIN VIEW: No patient pills! Shows Governance status & Admin Invite actions */
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -126,6 +163,33 @@ export default function Header({
                 >
                   <Crown size={13} />
                   <span>+ Admin</span>
+                </button>
+              </div>
+            </div>
+          ) : isPatient ? (
+            /* PATIENT VIEW */
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <span>👤 {currentUser.name}</span>
+                <span>• Tutor: <strong>{currentUser.assignedProfessionalName || 'Dr. Plínio'}</strong></span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={onOpenNewLogModal}
+                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.74rem' }}
+                >
+                  <PlusCircle size={13} />
+                  <span>+ Turno</span>
+                </button>
+                <button
+                  className="btn btn-ai btn-sm"
+                  onClick={onOpenAiDumpModal}
+                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.74rem' }}
+                >
+                  <Sparkles size={13} />
+                  <span>Dump</span>
                 </button>
               </div>
             </div>

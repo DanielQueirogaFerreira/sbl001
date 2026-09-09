@@ -10,6 +10,10 @@ import HeatmapAndCharts from './components/analytics/HeatmapAndCharts';
 import MasterFormsViewer from './components/database/MasterFormsViewer';
 import AiConversationalModal from './components/modals/AiConversationalModal';
 
+// Portal & Role Components
+import RootGatewayView from './components/portal/RootGatewayView';
+import PatientPortalView from './components/patient/PatientPortalView';
+
 // New Architecture Components
 import LoginModal from './components/auth/LoginModal';
 import ForceSetupModal from './components/auth/ForceSetupModal';
@@ -36,11 +40,13 @@ import {
   updateWeeklyRoutine, 
   resetToMasterBaseline 
 } from './data/patientRepository';
-import { getCurrentSession, setCurrentSession } from './services/authRepository';
+import { getCurrentSession, setCurrentSession, logoutUser, getAllUsers } from './services/authRepository';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => getCurrentSession());
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin_master';
+  const isPatient = currentUser?.role === 'patient';
+  const isProfessional = currentUser?.role === 'professional';
 
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('amanda');
@@ -52,7 +58,9 @@ export default function App() {
   const [timeframe, setTimeframe] = useState('all');
   const [dataSourceFilter, setDataSourceFilter] = useState('all'); // 'all' | 'RD' | 'SD'
 
-  // Modals state
+  // Modals and Subviews state
+  const [targetRoleLogin, setTargetRoleLogin] = useState(null);
+  const [patientSubView, setPatientSubView] = useState('portal'); // 'portal' | 'logger'
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -86,23 +94,26 @@ export default function App() {
   }, [currentUser]);
 
   // For Admins: No clinical patient pills in header or clinical dashboard
+  // For Patients: Only themselves
   // For Professionals: Only patients assigned to this professional (e.g. Dr. Plínio)
   const visiblePatients = isAdmin 
     ? [] 
-    : patients.filter(p => p.assignedProfessionalId === currentUser?.id);
+    : isPatient
+      ? patients.filter(p => p.id === currentUser?.id || (p.code && p.code === currentUser?.code))
+      : patients.filter(p => p.assignedProfessionalId === currentUser?.id);
 
   // Keep selectedPatientId valid for the active professional
   useEffect(() => {
-    if (!isAdmin && visiblePatients.length > 0) {
+    if (!isAdmin && !isPatient && visiblePatients.length > 0) {
       if (!visiblePatients.some(p => p.id === selectedPatientId)) {
         setSelectedPatientId(visiblePatients[0].id);
       }
     }
-  }, [visiblePatients, isAdmin, selectedPatientId]);
+  }, [visiblePatients, isAdmin, isPatient, selectedPatientId]);
 
-  const activePatient = !isAdmin 
-    ? (visiblePatients.find(p => p.id === selectedPatientId) || visiblePatients[0] || null) 
-    : null;
+  const activePatient = isPatient 
+    ? (visiblePatients[0] || currentUser)
+    : (!isAdmin ? (visiblePatients.find(p => p.id === selectedPatientId) || visiblePatients[0] || null) : null);
 
   const activeLogs = activePatient 
     ? getPatientLogs(activePatient.id, timeframe, false, dataSourceFilter)
@@ -135,6 +146,49 @@ export default function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleLogout = () => {
+    logoutUser();
+    setCurrentUser(null);
+    setPatientSubView('portal');
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleQuickLogin = (codeOrId) => {
+    if (codeOrId === 'DAN00001') {
+      const users = getAllUsers();
+      const dan = users.find(u => u.id === 'DAN00001') || users[0];
+      setCurrentSession(dan);
+      setCurrentUser(dan);
+      setRefreshKey(prev => prev + 1);
+    } else if (codeOrId === 'PLN00001') {
+      const users = getAllUsers();
+      const pln = users.find(u => u.id === 'PLN00001') || users[1];
+      setCurrentSession(pln);
+      setCurrentUser(pln);
+      setRefreshKey(prev => prev + 1);
+    } else {
+      const allPatients = getAllPatients();
+      const p = allPatients.find(item => item.id === codeOrId || (item.code && item.code.toLowerCase() === codeOrId.toLowerCase())) || allPatients[0];
+      if (p) {
+        const patientUser = {
+          id: p.id,
+          code: p.code || `PAC-${p.id.toUpperCase()}`,
+          name: p.name,
+          role: 'patient',
+          avatar: p.avatar || '👤',
+          diagnosis: p.diagnosis,
+          protocolId: p.protocolId || 'PRT001',
+          assignedProfessionalId: p.assignedProfessionalId || 'PLN00001',
+          assignedProfessionalName: p.assignedProfessionalName || 'Dr. Plínio',
+          keyAnchors: p.keyAnchors || []
+        };
+        setCurrentSession(patientUser);
+        setCurrentUser(patientUser);
+        setRefreshKey(prev => prev + 1);
+      }
+    }
+  };
+
   const handleOpenCreateInvite = (type) => {
     setCreateInviteType(type || (isAdmin ? 'professional' : 'patient'));
     setIsCreateInviteOpen(true);
@@ -149,125 +203,178 @@ export default function App() {
         onSelectPatient={setSelectedPatientId}
         currentUser={currentUser}
         onOpenProfile={() => setIsProfileModalOpen(true)}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenLogin={() => {
+          setTargetRoleLogin(null);
+          setIsLoginModalOpen(true);
+        }}
         onOpenTransfer={() => setIsTransferModalOpen(true)}
-        onOpenNewLogModal={() => setActiveTab('logger')}
+        onOpenNewLogModal={() => isPatient ? setPatientSubView('logger') : setActiveTab('logger')}
         onOpenAiDumpModal={() => setIsAiModalOpen(true)}
         onOpenCreateInvite={handleOpenCreateInvite}
         onOpenRedeemInvite={() => setIsRedeemInviteOpen(true)}
+        onLogout={handleLogout}
       />
 
-      {/* Main Tab Navigation */}
-      <Navigation
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        currentUser={currentUser}
-      />
+      {/* Main Tab Navigation (Only visible for Admin & Professional) */}
+      {currentUser && !isPatient && (
+        <Navigation
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          currentUser={currentUser}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="main-content">
-        {/* Global Filter Bar (visible for analytics, swot and dashboard tabs when a patient is active) */}
-        {!isAdmin && activePatient && (activeTab === 'dashboard' || activeTab === 'swot' || activeTab === 'analytics') && (
-          <FilterToolbar
-            timeframe={timeframe}
-            onSelectTimeframe={setTimeframe}
-            dataSourceFilter={dataSourceFilter}
-            onSelectDataSource={setDataSourceFilter}
-            totalLogs={activeLogs.length}
-            patientName={activePatient?.name}
+        {!currentUser ? (
+          /* ROOT GATEWAY VIEW: Unauthenticated landing at root */
+          <RootGatewayView
+            onSelectRoleLogin={(role) => {
+              setTargetRoleLogin(role);
+              setIsLoginModalOpen(true);
+            }}
+            onOpenRedeemInvite={() => setIsRedeemInviteOpen(true)}
+            onQuickLogin={handleQuickLogin}
           />
-        )}
+        ) : isPatient ? (
+          /* DEDICATED PATIENT PORTAL SPACE */
+          patientSubView === 'logger' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <button 
+                type="button"
+                className="btn btn-secondary btn-sm" 
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => setPatientSubView('portal')}
+              >
+                ← Voltar ao Meu Espaço
+              </button>
+              <DailyShiftLogger
+                patient={activePatient}
+                weeklyRoutines={weeklyRoutines}
+                onSaveLog={(pId, newLog) => {
+                  handleSaveLog(pId, newLog);
+                  setPatientSubView('portal');
+                }}
+                onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+              />
+            </div>
+          ) : (
+            <PatientPortalView
+              patient={activePatient}
+              logs={activeLogs}
+              weeklyRoutines={weeklyRoutines}
+              onSaveLog={handleSaveLog}
+              onOpenNewLogModal={() => setPatientSubView('logger')}
+              onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+            />
+          )
+        ) : (
+          /* PROFESSIONAL & ADMIN DASHBOARDS */
+          <>
+            {/* Global Filter Bar (visible for analytics, swot and dashboard tabs when a patient is active) */}
+            {!isAdmin && activePatient && (activeTab === 'dashboard' || activeTab === 'swot' || activeTab === 'analytics') && (
+              <FilterToolbar
+                timeframe={timeframe}
+                onSelectTimeframe={setTimeframe}
+                dataSourceFilter={dataSourceFilter}
+                onSelectDataSource={setDataSourceFilter}
+                totalLogs={activeLogs.length}
+                patientName={activePatient?.name}
+              />
+            )}
 
-        {/* Tab Views */}
-        {activeTab === 'dashboard' && !isAdmin && activePatient && (
-          <OverviewDashboard
-            patient={activePatient}
-            logs={activeLogs}
-            weeklyRoutines={weeklyRoutines}
-            onNavigateTab={setActiveTab}
-          />
-        )}
+            {/* Tab Views */}
+            {activeTab === 'dashboard' && !isAdmin && activePatient && (
+              <OverviewDashboard
+                patient={activePatient}
+                logs={activeLogs}
+                weeklyRoutines={weeklyRoutines}
+                onNavigateTab={setActiveTab}
+              />
+            )}
 
-        {activeTab === 'routine' && !isAdmin && activePatient && (
-          <RoutineManager
-            patient={activePatient}
-            weeklyRoutines={weeklyRoutines}
-            logs={activeLogs}
-            onUpdateRoutine={handleUpdateRoutine}
-          />
-        )}
+            {activeTab === 'routine' && !isAdmin && activePatient && (
+              <RoutineManager
+                patient={activePatient}
+                weeklyRoutines={weeklyRoutines}
+                logs={activeLogs}
+                onUpdateRoutine={handleUpdateRoutine}
+              />
+            )}
 
-        {activeTab === 'logger' && !isAdmin && activePatient && (
-          <DailyShiftLogger
-            patient={activePatient}
-            weeklyRoutines={weeklyRoutines}
-            onSaveLog={handleSaveLog}
-            onOpenAiDumpModal={() => setIsAiModalOpen(true)}
-          />
-        )}
+            {activeTab === 'logger' && !isAdmin && activePatient && (
+              <DailyShiftLogger
+                patient={activePatient}
+                weeklyRoutines={weeklyRoutines}
+                onSaveLog={handleSaveLog}
+                onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+              />
+            )}
 
-        {activeTab === 'swot' && !isAdmin && activePatient && (
-          <SwotAnalysisView
-            patient={activePatient}
-            logs={activeLogs}
-            weeklyRoutines={weeklyRoutines}
-            timeframe={timeframe}
-            onSelectTimeframe={setTimeframe}
-          />
-        )}
+            {activeTab === 'swot' && !isAdmin && activePatient && (
+              <SwotAnalysisView
+                patient={activePatient}
+                logs={activeLogs}
+                weeklyRoutines={weeklyRoutines}
+                timeframe={timeframe}
+                onSelectTimeframe={setTimeframe}
+              />
+            )}
 
-        {activeTab === 'analytics' && !isAdmin && activePatient && (
-          <HeatmapAndCharts
-            patient={activePatient}
-            logs={activeLogs}
-          />
-        )}
+            {activeTab === 'analytics' && !isAdmin && activePatient && (
+              <HeatmapAndCharts
+                patient={activePatient}
+                logs={activeLogs}
+              />
+            )}
 
-        {activeTab === 'invites' && (
-          <InvitesManagerView
-            currentUser={currentUser}
-            onOpenCreateInvite={() => handleOpenCreateInvite(isAdmin ? 'professional' : 'patient')}
-          />
-        )}
+            {activeTab === 'invites' && (
+              <InvitesManagerView
+                currentUser={currentUser}
+                onOpenCreateInvite={() => handleOpenCreateInvite(isAdmin ? 'professional' : 'patient')}
+              />
+            )}
 
-        {activeTab === 'public_square' && (
-          <PublicSquareView
-            currentProfessional={currentUser}
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
+            {activeTab === 'public_square' && (
+              <PublicSquareView
+                currentProfessional={currentUser}
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            )}
 
-        {activeTab === 'protocols' && (
-          <ProtocolStudioView
-            currentUser={currentUser}
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
+            {activeTab === 'protocols' && (
+              <ProtocolStudioView
+                currentUser={currentUser}
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            )}
 
-        {activeTab === 'health' && !isAdmin && (
-          <ProfessionalHealthView
-            currentProfessional={currentUser}
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
+            {activeTab === 'health' && !isAdmin && (
+              <ProfessionalHealthView
+                currentProfessional={currentUser}
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            )}
 
-        {activeTab === 'scepter' && isAdmin && (
-          <ScepterControlPanel
-            currentUser={currentUser}
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
+            {activeTab === 'scepter' && isAdmin && (
+              <ScepterControlPanel
+                currentUser={currentUser}
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            )}
 
-        {activeTab === 'synthetic' && isAdmin && (
-          <SyntheticDataLab
-            onRefresh={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
+            {activeTab === 'synthetic' && isAdmin && (
+              <SyntheticDataLab
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            )}
 
-        {activeTab === 'database' && (
-          <MasterFormsViewer
-            onResetBaseline={handleResetBaseline}
-          />
+            {activeTab === 'database' && (
+              <MasterFormsViewer
+                onResetBaseline={handleResetBaseline}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -284,6 +391,7 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+        targetRole={targetRoleLogin}
         onOpenRedeemInvite={() => {
           setIsLoginModalOpen(false);
           setIsRedeemInviteOpen(true);
@@ -350,18 +458,23 @@ export default function App() {
         </p>
       </footer>
 
-      {/* Mobile-First Bottom Navigation Bar (Fixed 9:16 Thumb Navigation) */}
-      <MobileBottomNav
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        currentUser={currentUser}
-        onOpenNewLogModal={() => setActiveTab('logger')}
-        onOpenAiDumpModal={() => setIsAiModalOpen(true)}
-        onOpenTransferModal={() => setIsTransferModalOpen(true)}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        onOpenCreateInvite={handleOpenCreateInvite}
-      />
+      {/* Mobile-First Bottom Navigation Bar (Hidden for Root Gateway & Patient Portal) */}
+      {currentUser && !isPatient && (
+        <MobileBottomNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          currentUser={currentUser}
+          onOpenNewLogModal={() => setActiveTab('logger')}
+          onOpenAiDumpModal={() => setIsAiModalOpen(true)}
+          onOpenTransferModal={() => setIsTransferModalOpen(true)}
+          onOpenProfileModal={() => setIsProfileModalOpen(true)}
+          onOpenLoginModal={() => {
+            setTargetRoleLogin(null);
+            setIsLoginModalOpen(true);
+          }}
+          onOpenCreateInvite={handleOpenCreateInvite}
+        />
+      )}
 
       {/* Technical Version Badge with Text Scrim (Bottom Left) */}
       <VersionBadge />

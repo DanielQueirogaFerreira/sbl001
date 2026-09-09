@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { LogIn, Key, Shield, User, Sparkles, X, Check } from 'lucide-react';
+import { LogIn, Key, Shield, User, Sparkles, X, Check, Stethoscope, Crown } from 'lucide-react';
 import { getAllUsers, authenticateUser, setCurrentSession } from '../../services/authRepository';
+import { getAllPatients } from '../../data/patientRepository';
 import PasswordInput from '../common/PasswordInput';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRedeemInvite }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRedeemInvite, targetRole = null }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const users = getAllUsers();
+  const patients = getAllPatients();
 
   if (!isOpen) return null;
 
@@ -31,18 +33,63 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
     onClose();
   };
 
+  // Determine modal header based on target role
+  const getHeaderMeta = () => {
+    if (targetRole === 'patient') {
+      return {
+        title: 'Área do Paciente • Acesso',
+        subtitle: 'Entre com seu nome de paciente ou código (ex: amanda, PAC-AMANDA)',
+        icon: User,
+        color: '#c084fc',
+        placeholder: 'Ex: amanda ou PAC-XXXX',
+        showPassword: true
+      };
+    }
+    if (targetRole === 'professional') {
+      return {
+        title: 'Área do Profissional • Acesso',
+        subtitle: 'Acesso com e-mail cadastrado ou código oficial (ex: PLN00001)',
+        icon: Stethoscope,
+        color: 'var(--color-prazer-light)',
+        placeholder: 'Ex: plinio@sobriedade.lab ou PLN00001',
+        showPassword: true
+      };
+    }
+    if (targetRole === 'admin') {
+      return {
+        title: 'Área do Administrador • Acesso',
+        subtitle: 'Acesso institucional por e-mail ou código de governança (ex: DAN00001)',
+        icon: Crown,
+        color: '#fbbf24',
+        placeholder: 'Ex: daniel.queiroga@nhnone.space ou DAN00001',
+        showPassword: true
+      };
+    }
+    return {
+      title: 'Autenticação Clínica & Acesso',
+      subtitle: 'Acesso por E-mail Oficial ou Código Gerado',
+      icon: LogIn,
+      color: 'var(--color-prazer-light)',
+      placeholder: 'Ex: daniel.queiroga@nhnone.space, PLN00001 ou amanda',
+      showPassword: true
+    };
+  };
+
+  const meta = getHeaderMeta();
+  const HeaderIcon = meta.icon;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div className="card-icon-badge">
-              <LogIn size={20} color="var(--color-prazer-light)" />
+            <div className="card-icon-badge" style={{ color: meta.color }}>
+              <HeaderIcon size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0 }}>Autenticação Clínica</h3>
+              <h3 style={{ margin: 0 }}>{meta.title}</h3>
               <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Acesso por E-mail Oficial ou Código (ex: DAN00001, PLN00001)
+                {meta.subtitle}
               </p>
             </div>
           </div>
@@ -60,11 +107,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label className="form-label">E-mail ou Código de Acesso:</label>
+              <label className="form-label">E-mail, Código de Acesso ou Nome:</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Ex: daniel.queiroga@nhnone.space ou PLN00001"
+                placeholder={meta.placeholder}
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
                 autoFocus
@@ -95,7 +142,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
               }}
               style={{ width: '100%', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}
             >
-              <Key size={15} /> Possui um Convite? Resgatar & Criar Conta
+              <Key size={15} /> Possui um Convite? Resgatar & Criar Conta (PIN 4 Dígitos)
             </button>
           </form>
 
@@ -106,11 +153,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
             </span>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {users.map(u => (
+              {/* Daniel Queiroga (Admin Master) */}
+              {(!targetRole || targetRole === 'admin') && (
                 <button
-                  key={u.id}
                   type="button"
-                  onClick={() => handleQuickSwitch(u)}
+                  onClick={() => handleQuickSwitch(users.find(u => u.id === 'DAN00001') || users[0])}
                   className="shift-box"
                   style={{
                     padding: '0.65rem 0.85rem',
@@ -123,27 +170,97 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{u.avatar}</span>
+                    <span style={{ fontSize: '1.4rem' }}>👑</span>
                     <div>
                       <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {u.name}
-                        {u.hasScepter && <span style={{ marginLeft: '0.4rem' }}>👑</span>}
-                        {u.isSynthetic && (
-                          <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.4)', marginLeft: '0.4rem', fontSize: '0.68rem' }}>
-                            [SD]
-                          </span>
-                        )}
+                        Daniel Queiroga <span style={{ marginLeft: '0.25rem' }}>👑</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Código: <strong style={{ color: '#38bdf8' }}>{u.code}</strong> • {u.email || '(Sem e-mail - Login com Código)'}
+                        Código: <strong style={{ color: '#38bdf8' }}>DAN00001</strong> • Master Admin
                       </div>
                     </div>
                   </div>
-                  <span className="badge badge-gray" style={{ fontSize: '0.72rem' }}>
-                    {u.role === 'admin_master' ? 'Master Admin' : u.role === 'admin' ? 'Admin' : 'Profissional'}
+                  <span className="badge badge-misto" style={{ fontSize: '0.72rem' }}>
+                    Master Admin
                   </span>
                 </button>
-              ))}
+              )}
+
+              {/* Dr. Plínio (Healthcare Professional) */}
+              {(!targetRole || targetRole === 'professional') && (
+                <button
+                  type="button"
+                  onClick={() => handleQuickSwitch(users.find(u => u.id === 'PLN00001') || users[1])}
+                  className="shift-box"
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.4rem' }}>👨‍⚕️</span>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Dr. Plínio
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Código: <strong style={{ color: '#38bdf8' }}>PLN00001</strong> • Tutor Ambulatorial PRT001
+                      </div>
+                    </div>
+                  </div>
+                  <span className="badge badge-prazer" style={{ fontSize: '0.72rem' }}>
+                    Profissional
+                  </span>
+                </button>
+              )}
+
+              {/* Patient Quick Access (Amanda) */}
+              {(!targetRole || targetRole === 'patient') && (
+                <button
+                  type="button"
+                  onClick={() => handleQuickSwitch({
+                    id: 'amanda',
+                    code: 'PAC-AMANDA',
+                    name: 'Amanda',
+                    role: 'patient',
+                    avatar: '👩‍⚕️',
+                    diagnosis: 'Recuperação - Fase de Consolidação',
+                    assignedProfessionalId: 'PLN00001',
+                    assignedProfessionalName: 'Dr. Plínio',
+                    keyAnchors: ['Ambulatório', 'Academia & Estudo', 'Família & Amigos']
+                  })}
+                  className="shift-box"
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(168, 85, 247, 0.3)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.4rem' }}>👩‍⚕️</span>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Amanda
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Código: <strong style={{ color: '#c084fc' }}>PAC-AMANDA</strong> • Tutela Dr. Plínio
+                      </div>
+                    </div>
+                  </div>
+                  <span className="badge badge-brand" style={{ fontSize: '0.72rem' }}>
+                    Paciente
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -151,3 +268,4 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRede
     </div>
   );
 }
+

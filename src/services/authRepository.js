@@ -1,8 +1,4 @@
-/**
- * Authentication & User Management Repository
- * Multi-layer access: Master Admin, Admins, and Healthcare Professionals
- * Laboratório da Sobriedade
- */
+import { getAllPatients } from '../data/patientRepository.js';
 
 const STORAGE_KEY = 'sbl_auth_users_state';
 const SESSION_KEY = 'sbl_auth_current_session';
@@ -38,7 +34,7 @@ const DEFAULT_USERS = [
     role: 'admin_master',
     avatar: '👑',
     password: 'Master@2026',
-    mustChangePassword: true,
+    mustChangePassword: false, // Senha já cadastrada — nunca exigir no root
     mustProvideEmail: false,
     hasScepter: true,
     isSynthetic: false,
@@ -49,12 +45,12 @@ const DEFAULT_USERS = [
     id: 'PLN00001',
     code: 'PLN00001',
     name: 'Dr. Plínio',
-    email: '', // Sem email inicial — deve logar com código e cadastrar email
+    email: 'dr.plinio@sobriedade.lab',
     role: 'professional',
     avatar: '👨‍⚕️',
     password: 'Plinio@2026',
-    mustChangePassword: true,
-    mustProvideEmail: true,
+    mustChangePassword: false,
+    mustProvideEmail: false,
     hasScepter: false,
     isSynthetic: false,
     createdAt: '2026-09-01T08:00:00Z',
@@ -100,6 +96,11 @@ export function getAllUsers() {
     if (saved) {
       try {
         USERS_CACHE = JSON.parse(saved);
+        // Guarantee Daniel Queiroga's mustChangePassword is false
+        const dan = USERS_CACHE.find(u => u.id === 'DAN00001');
+        if (dan) {
+          dan.mustChangePassword = false;
+        }
       } catch (e) {
         USERS_CACHE = [...DEFAULT_USERS];
       }
@@ -130,47 +131,91 @@ export function getUserByEmail(email) {
 
 /**
  * Authenticates by identifier (email or code) and password
+ * Supports Admins, Healthcare Professionals, and Patients
  */
 export function authenticateUser(identifier = '', password = '') {
   const clean = identifier.trim().toLowerCase();
   const users = getAllUsers();
 
+  // 1. Search in authorized users (admin, professional)
   const user = users.find(u => 
     (u.email && u.email.toLowerCase() === clean) || 
     (u.code && u.code.toLowerCase() === clean) ||
     (u.id && u.id.toLowerCase() === clean)
   );
 
-  if (!user) {
-    return { success: false, error: 'Usuário ou código de acesso não encontrado.' };
+  if (user) {
+    if (user.password !== password) {
+      return { success: false, error: 'Senha incorreta para este usuário.' };
+    }
+    return { success: true, user };
   }
 
-  if (user.password !== password) {
-    return { success: false, error: 'Senha incorreta para este usuário.' };
+  // 2. Search in patients cohort (pre-registered and dynamically redeemed)
+  try {
+    const allPatients = getAllPatients() || [];
+    const matched = allPatients.find(p => 
+      p.id.toLowerCase() === clean || 
+      (p.code && p.code.toLowerCase() === clean) || 
+      p.name.toLowerCase() === clean
+    );
+
+    if (matched) {
+      return { 
+        success: true, 
+        user: {
+          id: matched.id,
+          code: matched.code || `PAC-${matched.id.toUpperCase()}`,
+          name: matched.name,
+          role: 'patient',
+          avatar: matched.avatar || '👤',
+          diagnosis: matched.diagnosis,
+          protocolId: matched.protocolId || 'PRT001',
+          assignedProfessionalId: matched.assignedProfessionalId || 'PLN00001',
+          assignedProfessionalName: matched.assignedProfessionalName || 'Dr. Plínio',
+          keyAnchors: matched.keyAnchors || []
+        }
+      };
+    }
+  } catch (err) {
+    console.warn('Patient lookup fallback:', err);
   }
 
-  return { success: true, user };
+  return { success: false, error: 'Usuário, código de acesso ou paciente não encontrado.' };
 }
 
 export function setCurrentSession(user) {
-  safeSetStorage(SESSION_KEY, JSON.stringify(user));
+  if (!user) {
+    safeSetStorage(SESSION_KEY, '');
+  } else {
+    safeSetStorage(SESSION_KEY, JSON.stringify(user));
+  }
 }
 
 export function getCurrentSession() {
   const saved = safeGetStorage(SESSION_KEY);
-  if (saved) {
+  if (saved && saved.trim() !== '') {
     try {
       const parsed = JSON.parse(saved);
-      // Re-hydrate with up-to-date user state from cache
-      const fresh = getUserById(parsed.id);
-      return fresh || parsed;
+      if (parsed && parsed.role === 'patient') {
+        return parsed;
+      }
+      if (parsed && parsed.id) {
+        // Re-hydrate with up-to-date user state from cache
+        const fresh = getUserById(parsed.id);
+        if (fresh) {
+          if (fresh.id === 'DAN00001') {
+            fresh.mustChangePassword = false;
+          }
+          return fresh;
+        }
+        return parsed;
+      }
     } catch (e) {
       // Fallback
     }
   }
-  // Default session: Daniel Queiroga (Master Admin)
-  const defaultUser = getUserById('DAN00001') || DEFAULT_USERS[0];
-  return defaultUser;
+  return null; // When no session exists, system renders RootGatewayView!
 }
 
 export function logoutUser() {
