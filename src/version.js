@@ -4,8 +4,8 @@
  */
 export const BUILD_INFO = {
   version: '2.1.0',
-  timestampUTC: '2026-09-09T08:02:02.051Z',
-  commitHash: '0777d05',
+  timestampUTC: '2026-09-09T08:02:34.615Z',
+  commitHash: '5ff65b2',
   environment: 'production',
   releaseTag: 'sbl001-gov-v2.1'
 };
